@@ -1,6 +1,6 @@
 {
   "name": "cachly",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Type-safe, production-ready in-memory cache system for Node.js and TypeScript with advanced features.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
