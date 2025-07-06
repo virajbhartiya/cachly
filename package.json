@@ -1,8 +1,9 @@
 {
-  "name": "grip",
+  "name": "cachly",
   "version": "1.0.0",
-  "description": "Type-safe, production-ready in-memory cache system with dependency tracking and intelligent invalidation",
+  "description": "Type-safe, production-ready in-memory cache system for Node.js and TypeScript with advanced features.",
   "main": "dist/index.js",
+  "license": "MIT",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
@@ -51,10 +52,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/grip.git"
+    "url": "https://github.com/virajbhartiya/cachly.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/grip/issues"
+    "url": "https://github.com/virajbhartiya/cachly/issues"
   },
-  "homepage": "https://github.com/yourusername/grip#readme"
+  "homepage": "https://github.com/virajbhartiya/cachly#readme"
 } 

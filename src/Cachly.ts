@@ -19,7 +19,7 @@ import { CircuitBreaker } from './utils/CircuitBreaker';
 import { PartitioningUtil } from './utils/Partitioning';
 import { MonitoringUtil } from './utils/Monitoring';
 
-export class Grip {
+export class Cachly {
   private items = new Map<string, CacheItem>();
   private config: Required<CacheConfig>;
   private cacheStats: CacheStats;
@@ -118,7 +118,7 @@ export class Grip {
         }
       } catch (error) {
         if (this.config.log) {
-          console.error(`[Grip] Compression failed for ${key}:`, error);
+          console.error(`[Cachly] Compression failed for ${key}:`, error);
         }
       }
     }
@@ -143,7 +143,7 @@ export class Grip {
     this.eventEmitter.emit('set', key, value);
 
     if (this.config.log) {
-      console.log(`[Grip] Set: ${key}`);
+      console.log(`[Cachly] Set: ${key}`);
     }
 
     this.evictIfNeeded();
@@ -192,7 +192,7 @@ export class Grip {
         result = await CompressionUtil.decompress(item.value as Buffer, this.config.compression.algorithm);
       } catch (error) {
         if (this.config.log) {
-          console.error(`[Grip] Decompression failed for ${key}:`, error);
+          console.error(`[Cachly] Decompression failed for ${key}:`, error);
         }
         return undefined;
       }
@@ -261,7 +261,7 @@ export class Grip {
           item = this.items.get(key);
         } catch (error) {
           if (this.config.log) {
-            console.error(`[Grip] Background refresh failed for ${key}:`, error);
+            console.error(`[Cachly] Background refresh failed for ${key}:`, error);
           }
         }
       } else {
@@ -278,7 +278,7 @@ export class Grip {
             }
           } catch (error) {
             if (this.config.log) {
-              console.error(`[Grip] Background refresh failed for ${key}:`, error);
+              console.error(`[Cachly] Background refresh failed for ${key}:`, error);
             }
           }
         }, 0);
@@ -364,7 +364,7 @@ export class Grip {
         });
       } catch (error) {
         if (this.config.log) {
-          console.error(`[Grip] Warmup failed for ${item.key}:`, error);
+          console.error(`[Cachly] Warmup failed for ${item.key}:`, error);
         }
       }
     });

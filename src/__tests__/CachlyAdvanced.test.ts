@@ -1,10 +1,10 @@
-import { Grip } from '../Grip';
+import { Cachly } from '../Cachly';
 
-describe('Grip Advanced Features', () => {
-  let cache: Grip;
+describe('Cachly Advanced Features', () => {
+  let cache: Cachly;
 
   beforeEach(() => {
-    cache = new Grip();
+    cache = new Cachly();
   });
 
   afterEach(() => {
@@ -13,7 +13,7 @@ describe('Grip Advanced Features', () => {
 
   describe('Compression', () => {
     it('should compress large values', async () => {
-      const cacheWithCompression = new Grip({
+      const cacheWithCompression = new Cachly({
         compression: { enabled: true, algorithm: 'gzip', threshold: 100 }
       });
 
@@ -31,7 +31,7 @@ describe('Grip Advanced Features', () => {
     });
 
     it('should not compress small values', async () => {
-      const cacheWithCompression = new Grip({
+      const cacheWithCompression = new Cachly({
         compression: { enabled: true, algorithm: 'gzip', threshold: 1000 }
       });
 
@@ -50,7 +50,7 @@ describe('Grip Advanced Features', () => {
 
   describe('Circuit Breaker', () => {
     it('should handle circuit breaker pattern', async () => {
-      const cacheWithCircuitBreaker = new Grip({
+      const cacheWithCircuitBreaker = new Cachly({
         circuitBreaker: { enabled: true, failureThreshold: 2, recoveryTimeout: 100 }
       });
 
@@ -74,7 +74,7 @@ describe('Grip Advanced Features', () => {
     });
 
     it('should recover after timeout', async () => {
-      const cacheWithCircuitBreaker = new Grip({
+      const cacheWithCircuitBreaker = new Cachly({
         circuitBreaker: { enabled: true, failureThreshold: 1, recoveryTimeout: 50 }
       });
 
@@ -97,7 +97,7 @@ describe('Grip Advanced Features', () => {
 
   describe('Partitioning', () => {
     it('should distribute keys across partitions', () => {
-      const cacheWithPartitioning = new Grip({
+      const cacheWithPartitioning = new Cachly({
         partitioning: { enabled: true, strategy: 'hash', partitions: 4 }
       });
 
@@ -113,7 +113,7 @@ describe('Grip Advanced Features', () => {
     });
 
     it('should check partition balance', () => {
-      const cacheWithPartitioning = new Grip({
+      const cacheWithPartitioning = new Cachly({
         partitioning: { enabled: true, strategy: 'hash', partitions: 4 }
       });
 
@@ -124,7 +124,7 @@ describe('Grip Advanced Features', () => {
     });
 
     it('should get all partitions', () => {
-      const cacheWithPartitioning = new Grip({
+      const cacheWithPartitioning = new Cachly({
         partitioning: { enabled: true, strategy: 'hash', partitions: 4 }
       });
 
@@ -137,7 +137,7 @@ describe('Grip Advanced Features', () => {
 
   describe('Monitoring', () => {
     it('should provide health status', () => {
-      const cacheWithMonitoring = new Grip({
+      const cacheWithMonitoring = new Cachly({
         monitoring: { enabled: true, metrics: ['hitRate', 'memoryUsage'] }
       });
 
@@ -149,7 +149,7 @@ describe('Grip Advanced Features', () => {
     });
 
     it('should provide detailed metrics', () => {
-      const cacheWithMonitoring = new Grip({
+      const cacheWithMonitoring = new Cachly({
         monitoring: { enabled: true, metrics: ['hitRate', 'memoryUsage'] }
       });
 
@@ -228,7 +228,7 @@ describe('Grip Advanced Features', () => {
 
   describe('Stale While Revalidate', () => {
     it('should serve stale content while revalidating', async () => {
-      const cacheWithStale = new Grip({
+      const cacheWithStale = new Cachly({
         staleWhileRevalidate: true,
         defaultTtl: 100,
       });
@@ -259,7 +259,7 @@ describe('Grip Advanced Features', () => {
 
   describe('Memory Management', () => {
     it('should track memory usage', async () => {
-      const cacheWithMemoryLimit = new Grip({
+      const cacheWithMemoryLimit = new Cachly({
         maxMemory: 1000,
       });
 
@@ -273,7 +273,7 @@ describe('Grip Advanced Features', () => {
     });
 
     it('should evict based on memory limit', async () => {
-      const cacheWithMemoryLimit = new Grip({
+      const cacheWithMemoryLimit = new Cachly({
         maxMemory: 100,
         evictionPolicy: 'lru',
       });
@@ -292,7 +292,7 @@ describe('Grip Advanced Features', () => {
 
   describe('Event System', () => {
     it('should emit compression events', async () => {
-      const cacheWithCompression = new Grip({
+      const cacheWithCompression = new Cachly({
         compression: { enabled: true, algorithm: 'gzip', threshold: 100 }
       });
 
@@ -312,7 +312,7 @@ describe('Grip Advanced Features', () => {
     });
 
     it('should emit partition events', async () => {
-      const cacheWithPartitioning = new Grip({
+      const cacheWithPartitioning = new Cachly({
         partitioning: { enabled: true, strategy: 'hash', partitions: 4 }
       });
 
@@ -363,7 +363,7 @@ describe('Grip Advanced Features', () => {
         },
       };
 
-      const cacheWithComplexConfig = new Grip(complexConfig);
+      const cacheWithComplexConfig = new Cachly(complexConfig);
       expect(cacheWithComplexConfig).toBeDefined();
 
       const health = cacheWithComplexConfig.health();

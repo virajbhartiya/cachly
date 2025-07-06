@@ -1,10 +1,10 @@
-import { Grip } from '../Grip';
+import { Cachly } from '../Cachly';
 
-describe('Grip', () => {
-  let cache: Grip;
+describe('Cachly Basic', () => {
+  let cache: Cachly;
 
   beforeEach(() => {
-    cache = new Grip();
+    cache = new Cachly();
   });
 
   afterEach(() => {
@@ -150,7 +150,7 @@ describe('Grip', () => {
 
   describe('Eviction', () => {
     it('should evict items when maxItems is reached', async () => {
-      const limitedCache = new Grip({ maxItems: 2 });
+      const limitedCache = new Cachly({ maxItems: 2 });
       
       await limitedCache.set('key1', 'value1');
       await limitedCache.set('key2', 'value2');

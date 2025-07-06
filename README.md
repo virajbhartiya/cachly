@@ -1,4 +1,4 @@
-# Grip
+# Cachly
 
 A type-safe, production-ready in-memory cache system for Node.js and TypeScript, featuring advanced dependency tracking, intelligent invalidation, TTL, stale-while-revalidate, async operations, event system, statistics, advanced eviction, partitioning, compression, circuit breaker, distributed support, and more.
 
@@ -21,15 +21,15 @@ A type-safe, production-ready in-memory cache system for Node.js and TypeScript,
 ## Installation
 
 ```bash
-npm install grip
+npm install cachly
 ```
 
 ## Quick Start
 
 ```typescript
-import { Grip } from 'grip';
+import { Cachly } from 'cachly';
 
-const cache = new Grip({
+const cache = new Cachly({
   maxItems: 1000,
   defaultTtl: 60000,
   staleWhileRevalidate: true,
@@ -121,16 +121,16 @@ interface CacheConfig {
 ## Persistence Adapters
 
 ```typescript
-import { FSAdapter } from 'grip';
-const cache = new Grip({ persistence: new FSAdapter('./cache') });
+import { FSAdapter } from 'cachly';
+const cache = new Cachly({ persistence: new FSAdapter('./cache') });
 ```
 
 ## Namespaces & Partitioning
 
 ```typescript
-import { GripNamespace } from 'grip';
-const userCache = GripNamespace.namespace('user');
-const postCache = GripNamespace.namespace('post');
+import { CachlyNamespace } from 'cachly';
+const userCache = CachlyNamespace.namespace('user');
+const postCache = CachlyNamespace.namespace('post');
 ```
 
 ## Cache Warming
