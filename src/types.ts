@@ -2,6 +2,7 @@ export interface CacheOptions {
   ttl: number | undefined;
   staleTtl: number | undefined;
   dependsOn: string[] | undefined;
+  tags?: string[];
   onExpire: ((key: string, value: any) => void) | undefined;
   __testAwaitBackground?: boolean;
 }
@@ -13,6 +14,7 @@ export interface CacheItem<T = any> {
   staleAt: number | undefined;
   dependsOn: Set<string>;
   dependents: Set<string>;
+  tags?: Set<string>;
   accessCount: number;
   lastAccessed: number;
   compressed?: boolean;
@@ -88,6 +90,8 @@ export interface CacheConfig {
   partitioning?: PartitioningConfig;
   monitoring?: MonitoringConfig;
   distributed?: DistributedConfig;
+  onHit?: (key: string) => void;
+  onMiss?: (key: string) => void;
 }
 
 export interface PersistenceAdapter {
@@ -108,6 +112,10 @@ export interface CacheEventMap {
   circuitOpen: (key: string) => void;
   circuitClose: (key: string) => void;
   partitionHit: (partition: number, key: string) => void;
+  tagInvalidated: (tag: string, affectedKeys: string[]) => void;
+  bulkOperation: (operation: BulkOperation, result: any) => void;
+  groupCreated: (group: CacheGroup) => void;
+  groupDeleted: (groupName: string) => void;
 }
 
 export type CacheEventType = keyof CacheEventMap;
@@ -162,4 +170,23 @@ export interface PartitionInfo {
   keyCount: number;
   memoryUsage: number;
   hitRate: number;
+}
+
+export interface CacheGroup {
+  name: string;
+  keys: Set<string>;
+  config: Partial<CacheConfig>;
+}
+
+export interface BulkOperation {
+  get: string[];
+  set: Array<{ key: string; value: any; options?: Partial<CacheOptions> }>;
+  delete: string[];
+  invalidateByTag: string[];
+}
+
+export interface CacheTag {
+  name: string;
+  keys: Set<string>;
+  createdAt: number;
 } 

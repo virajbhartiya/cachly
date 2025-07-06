@@ -13,6 +13,9 @@ import {
   Metrics,
   CircuitBreakerState,
   PartitionInfo,
+  CacheGroup,
+  BulkOperation,
+  CacheTag,
 } from './types';
 import { CompressionUtil } from './utils/compression';
 import { CircuitBreaker } from './utils/CircuitBreaker';
@@ -34,6 +37,13 @@ export class Cachly {
   private monitoringUtil?: MonitoringUtil;
   private circuitBreakerTrips = 0;
 
+  // New features
+  private tags = new Map<string, CacheTag>();
+  private groups = new Map<string, CacheGroup>();
+
+  private hitHook?: (key: string) => void;
+  private missHook?: (key: string) => void;
+
   constructor(config: CacheConfig = {}) {
     this.config = {
       maxItems: 1000,
@@ -49,6 +59,8 @@ export class Cachly {
       partitioning: { enabled: false, strategy: 'hash', partitions: 4 },
       monitoring: { enabled: false, metrics: [] },
       distributed: { enabled: false, nodes: [], replication: false, consistency: 'eventual', partitionStrategy: 'consistent-hashing' },
+      onHit: () => {},
+      onMiss: () => {},
       ...config,
     };
 
@@ -90,6 +102,13 @@ export class Cachly {
     if (this.config.defaultTtl > 0) {
       this.startCleanupInterval();
     }
+
+    if (typeof config['onHit'] === 'function') {
+      this.hitHook = config['onHit'];
+    }
+    if (typeof config['onMiss'] === 'function') {
+      this.missHook = config['onMiss'];
+    }
   }
 
   async set<T>(key: string, value: T, options: Partial<CacheOptions> = {}): Promise<void> {
@@ -130,6 +149,7 @@ export class Cachly {
       staleAt,
       dependsOn: new Set(options.dependsOn || []),
       dependents: new Set(),
+      tags: new Set(options.tags || []),
       accessCount: 0,
       lastAccessed: now,
       compressed,
@@ -139,6 +159,7 @@ export class Cachly {
 
     this.items.set(key, item);
     this.updateDependencies(key, item.dependsOn);
+    this.updateTags(key, item.tags || new Set());
     this.updateStats();
     this.eventEmitter.emit('set', key, value);
 
@@ -161,6 +182,7 @@ export class Cachly {
       this.cacheStats.misses++;
       this.cacheStats.totalAccesses++;
       this.eventEmitter.emit('miss', key);
+      if (this.missHook) this.missHook(key);
       return undefined;
     }
 
@@ -169,6 +191,7 @@ export class Cachly {
       this.cacheStats.misses++;
       this.cacheStats.totalAccesses++;
       this.eventEmitter.emit('miss', key);
+      if (this.missHook) this.missHook(key);
       return undefined;
     }
 
@@ -177,6 +200,7 @@ export class Cachly {
     this.cacheStats.hits++;
     this.cacheStats.totalAccesses++;
     this.eventEmitter.emit('hit', key);
+    if (this.hitHook) this.hitHook(key);
 
     // Emit partition hit event
     if (this.partitioningUtil) {
@@ -305,6 +329,7 @@ export class Cachly {
     const item = this.items.get(key);
     if (item) {
       this.removeDependencies(key, item.dependsOn);
+      this.removeTags(key, item.tags);
       this.invalidateDependentsOnDelete(key);
       this.items.delete(key);
       this.updateStats();
@@ -626,5 +651,183 @@ export class Cachly {
   off<K extends CacheEventType>(event: K, listener: CacheEventMap[K]): this {
     this.eventEmitter.off(event, listener);
     return this;
+  }
+
+  async invalidateByTag(tag: string): Promise<string[]> {
+    const tagData = this.tags.get(tag);
+    if (!tagData) return [];
+
+    const affectedKeys = Array.from(tagData.keys);
+    for (const key of affectedKeys) {
+      this.delete(key);
+    }
+
+    this.tags.delete(tag);
+    this.eventEmitter.emit('tagInvalidated', tag, affectedKeys);
+    return affectedKeys;
+  }
+
+  async invalidateByTags(tags: string[]): Promise<Record<string, string[]>> {
+    const results: Record<string, string[]> = {};
+    for (const tag of tags) {
+      results[tag] = await this.invalidateByTag(tag);
+    }
+    return results;
+  }
+
+  getKeysByTag(tag: string): string[] {
+    const tagData = this.tags.get(tag);
+    return tagData ? Array.from(tagData.keys) : [];
+  }
+
+  getTagsByKey(key: string): string[] {
+    const item = this.items.get(key);
+    return item?.tags ? Array.from(item.tags) : [];
+  }
+
+  createGroup(name: string, config: Partial<CacheConfig> = {}): CacheGroup {
+    const group: CacheGroup = {
+      name,
+      keys: new Set(),
+      config,
+    };
+    this.groups.set(name, group);
+    this.eventEmitter.emit('groupCreated', group);
+    return group;
+  }
+
+  addToGroup(groupName: string, key: string): boolean {
+    const group = this.groups.get(groupName);
+    if (!group) return false;
+
+    group.keys.add(key);
+    return true;
+  }
+
+  removeFromGroup(groupName: string, key: string): boolean {
+    const group = this.groups.get(groupName);
+    if (!group) return false;
+
+    return group.keys.delete(key);
+  }
+
+  getGroupKeys(groupName: string): string[] {
+    const group = this.groups.get(groupName);
+    return group ? Array.from(group.keys) : [];
+  }
+
+  deleteGroup(groupName: string): boolean {
+    const group = this.groups.get(groupName);
+    if (!group) return false;
+
+    for (const key of group.keys) {
+      this.delete(key);
+    }
+
+    this.groups.delete(groupName);
+    this.eventEmitter.emit('groupDeleted', groupName);
+    return true;
+  }
+
+  async bulk(operation: BulkOperation): Promise<any> {
+    const startTime = Date.now();
+    const results: any = {
+      get: {},
+      set: [],
+      delete: [],
+      invalidateByTag: {},
+    };
+
+    for (const key of operation.get) {
+      results.get[key] = await this.get(key);
+    }
+
+    for (const { key, value, options } of operation.set) {
+      await this.set(key, value, options);
+      results.set.push(key);
+    }
+
+    for (const key of operation.delete) {
+      this.delete(key);
+      results.delete.push(key);
+    }
+
+    for (const tag of operation.invalidateByTag) {
+      results.invalidateByTag[tag] = await this.invalidateByTag(tag);
+    }
+
+    const duration = Date.now() - startTime;
+    this.eventEmitter.emit('bulkOperation', operation, { results, duration });
+    return results;
+  }
+
+  getKeys(pattern?: string): string[] {
+    const keys = Array.from(this.items.keys());
+    if (!pattern) return keys;
+
+    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+    return keys.filter(key => regex.test(key));
+  }
+
+  getKeysByPattern(pattern: string): string[] {
+    return this.getKeys(pattern);
+  }
+
+  getItemsByPattern(pattern: string): Array<{ key: string; item: CacheItem }> {
+    const keys = this.getKeysByPattern(pattern);
+    return keys.map(key => ({ key, item: this.items.get(key)! }));
+  }
+
+  getTopKeys(limit: number = 10): Array<{ key: string; accessCount: number }> {
+    return Array.from(this.items.entries())
+      .map(([key, item]) => ({ key, accessCount: item.accessCount }))
+      .sort((a, b) => b.accessCount - a.accessCount)
+      .slice(0, limit);
+  }
+
+  getLeastUsedKeys(limit: number = 10): Array<{ key: string; accessCount: number }> {
+    return Array.from(this.items.entries())
+      .map(([key, item]) => ({ key, accessCount: item.accessCount }))
+      .sort((a, b) => a.accessCount - b.accessCount)
+      .slice(0, limit);
+  }
+
+  getKeysByAge(limit: number = 10): Array<{ key: string; age: number }> {
+    const now = Date.now();
+    return Array.from(this.items.entries())
+      .map(([key, item]) => ({ key, age: now - item.createdAt }))
+      .sort((a, b) => b.age - a.age)
+      .slice(0, limit);
+  }
+
+  private updateTags(key: string, tags: Set<string>): void {
+    for (const tag of tags) {
+      if (!this.tags.has(tag)) {
+        this.tags.set(tag, { name: tag, keys: new Set(), createdAt: Date.now() });
+      }
+      this.tags.get(tag)!.keys.add(key);
+    }
+  }
+
+  private removeTags(key: string, tags?: Set<string>): void {
+    if (!tags) return;
+    
+    for (const tag of tags) {
+      const tagData = this.tags.get(tag);
+      if (tagData) {
+        tagData.keys.delete(key);
+        if (tagData.keys.size === 0) {
+          this.tags.delete(tag);
+        }
+      }
+    }
+  }
+
+  setHitHook(hook: (key: string) => void) {
+    this.hitHook = hook;
+  }
+
+  setMissHook(hook: (key: string) => void) {
+    this.missHook = hook;
   }
 } 

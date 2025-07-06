@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "Type-safe, production-ready in-memory cache system for Node.js and TypeScript with advanced features.",
   "main": "dist/index.js",
-  "license": "MIT",
   "types": "dist/index.d.ts",
+  "bin": {
+    "cachly": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -20,7 +22,8 @@
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "cli": "node dist/cli.js"
   },
   "keywords": [
     "cache",
@@ -29,7 +32,13 @@
     "dependency-tracking",
     "invalidation",
     "ttl",
-    "stale-while-revalidate"
+    "stale-while-revalidate",
+    "tags",
+    "groups",
+    "bulk-operations",
+    "decorators",
+    "middleware",
+    "cli"
   ],
   "author": "Viraj Bhartiya",
   "license": "MIT",

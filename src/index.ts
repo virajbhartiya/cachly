@@ -7,6 +7,9 @@ export * from './utils/CircuitBreaker';
 export * from './utils/Partitioning';
 export * from './utils/Monitoring';
 export * from './adapters/FSAdapter';
+export * from './decorators';
+export * from './middleware/express';
+export * from './cli';
 
 export class CachlyNamespace {
   private static namespaces = new Map<string, Cachly>();

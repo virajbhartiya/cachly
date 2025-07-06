@@ -1,6 +1,6 @@
 # Cachly
 
-A type-safe, production-ready in-memory cache system for Node.js and TypeScript, featuring advanced dependency tracking, intelligent invalidation, TTL, stale-while-revalidate, async operations, event system, statistics, advanced eviction, partitioning, compression, circuit breaker, distributed support, and more.
+A type-safe, production-ready in-memory cache system for Node.js and TypeScript, featuring advanced dependency tracking, intelligent invalidation, TTL, stale-while-revalidate, async operations, event system, statistics, advanced eviction, partitioning, compression, circuit breaker, distributed support, tags, groups, bulk operations, decorators, middleware, CLI tools, and cache hit/miss hooks.
 
 ## Features
 
@@ -17,6 +17,14 @@ A type-safe, production-ready in-memory cache system for Node.js and TypeScript,
 - **Circuit breaker** pattern
 - **Distributed cache** support
 - **Cache warming** strategies
+- **Tags and bulk invalidation**
+- **Cache groups** for organization
+- **Bulk operations** for performance
+- **Cache introspection** and analytics
+- **Decorators** for easy integration
+- **Express middleware** for web apps
+- **CLI tool** for management
+- **Cache hit/miss hooks** for custom logic
 
 ## Installation
 
@@ -48,6 +56,161 @@ await cache.set('post:1', postData, { dependsOn: ['user:1'] });
 cache.delete('user:1'); // Also invalidates post:1
 ```
 
+## Cache Hit/Miss Hooks
+
+You can run custom logic on every cache hit or miss, e.g. for logging, metrics, or tracing.
+
+### Via Config
+
+```typescript
+const cache = new Cachly({
+  onHit: (key) => {
+    console.log('Cache HIT:', key);
+  },
+  onMiss: (key) => {
+    console.log('Cache MISS:', key);
+  }
+});
+
+await cache.set('foo', 123);
+await cache.get('foo'); // logs: Cache HIT: foo
+await cache.get('bar'); // logs: Cache MISS: bar
+```
+
+### Via Methods
+
+```typescript
+const cache = new Cachly();
+
+cache.setHitHook((key) => {
+  // Custom logic for hit
+  console.log('HIT', key);
+});
+
+cache.setMissHook((key) => {
+  // Custom logic for miss
+  console.log('MISS', key);
+});
+```
+
+## Advanced Features
+
+### Tags and Bulk Operations
+
+```typescript
+// Set with tags
+await cache.set('user:1', userData, { tags: ['users', 'active'] });
+await cache.set('user:2', userData, { tags: ['users', 'inactive'] });
+
+// Invalidate by tag
+await cache.invalidateByTag('users'); // Removes all user data
+
+// Bulk operations
+const results = await cache.bulk({
+  get: ['key1', 'key2'],
+  set: [
+    { key: 'key3', value: 'value3' },
+    { key: 'key4', value: 'value4', options: { ttl: 5000 } }
+  ],
+  delete: ['old-key'],
+  invalidateByTag: ['expired-tag']
+});
+```
+
+### Cache Groups
+
+```typescript
+// Create and manage groups
+const userGroup = cache.createGroup('users', { maxItems: 100 });
+cache.addToGroup('users', 'user:1');
+cache.addToGroup('users', 'user:2');
+
+// Get group keys
+const userKeys = cache.getGroupKeys('users');
+
+// Delete entire group
+cache.deleteGroup('users');
+```
+
+### Cache Introspection
+
+```typescript
+// Pattern-based key discovery
+const userKeys = cache.getKeysByPattern('user:*');
+const postKeys = cache.getKeysByPattern('post:*');
+
+// Analytics
+const topKeys = cache.getTopKeys(10);
+const leastUsed = cache.getLeastUsedKeys(10);
+const oldestKeys = cache.getKeysByAge(10);
+```
+
+## Decorators
+
+```typescript
+import { cache, cacheWithTags, invalidateTags } from 'cachly';
+
+class UserService {
+  @cache({ ttl: 30000 })
+  async getUser(id: string) {
+    return await fetchUserFromDB(id);
+  }
+
+  @cacheWithTags(['users'], 60000)
+  async getUsers() {
+    return await fetchUsersFromDB();
+  }
+
+  @invalidateTags(['users'])
+  async updateUser(id: string, data: any) {
+    return await updateUserInDB(id, data);
+  }
+}
+```
+
+## Express Middleware
+
+```typescript
+import express from 'express';
+import { createCacheMiddleware, createInvalidateMiddleware } from 'cachly';
+
+const app = express();
+const cache = new Cachly();
+
+// Cache middleware
+app.use('/api/users', createCacheMiddleware({
+  cache,
+  ttl: 30000,
+  tags: (req) => ['users', req.params.id],
+  skip: (req) => req.method !== 'GET'
+}));
+
+// Invalidate middleware
+app.post('/api/users/:id', createInvalidateMiddleware({
+  cache,
+  tags: ['users']
+}));
+```
+
+## CLI Tool
+
+```bash
+# Install globally
+npm install -g cachly
+
+# Start CLI
+cachly
+
+# Available commands
+cachly> help
+cachly> set user:1 "John Doe" 30000
+cachly> get user:1
+cachly> stats
+cachly> keys user:*
+cachly> top 10
+cachly> clear
+```
+
 ## API Reference
 
 ### Basic Operations
@@ -67,6 +230,35 @@ await cache.getOrCompute<T>(key: string, loader: () => Promise<T>, options?: Cac
 await cache.getOrComputeWithStale<T>(key: string, loader: () => Promise<T>, options?: CacheOptions): Promise<T>
 ```
 
+### Tags & Groups
+
+```typescript
+await cache.invalidateByTag(tag: string): Promise<string[]>
+await cache.invalidateByTags(tags: string[]): Promise<Record<string, string[]>>
+cache.getKeysByTag(tag: string): string[]
+cache.getTagsByKey(key: string): string[]
+cache.createGroup(name: string, config?: Partial<CacheConfig>): CacheGroup
+cache.addToGroup(groupName: string, key: string): boolean
+cache.getGroupKeys(groupName: string): string[]
+cache.deleteGroup(groupName: string): boolean
+```
+
+### Bulk Operations
+
+```typescript
+await cache.bulk(operation: BulkOperation): Promise<any>
+```
+
+### Cache Introspection
+
+```typescript
+cache.getKeys(pattern?: string): string[]
+cache.getKeysByPattern(pattern: string): string[]
+cache.getTopKeys(limit?: number): Array<{ key: string; accessCount: number }>
+cache.getLeastUsedKeys(limit?: number): Array<{ key: string; accessCount: number }>
+cache.getKeysByAge(limit?: number): Array<{ key: string; age: number }>
+```
+
 ### Events
 
 ```typescript
@@ -77,6 +269,10 @@ cache.on('delete', (key) => { /* ... */ });
 cache.on('evict', (key, reason) => { /* ... */ });
 cache.on('compress', (key, originalSize, compressedSize) => { /* ... */ });
 cache.on('partitionHit', (partition, key) => { /* ... */ });
+cache.on('tagInvalidated', (tag, affectedKeys) => { /* ... */ });
+cache.on('bulkOperation', (operation, result) => { /* ... */ });
+cache.on('groupCreated', (group) => { /* ... */ });
+cache.on('groupDeleted', (groupName) => { /* ... */ });
 ```
 
 ### Statistics & Monitoring
@@ -109,12 +305,14 @@ interface CacheConfig {
   log?: boolean;
   namespace?: string;
   persistence?: 'none' | PersistenceAdapter;
-  evictionPolicy?: 'lru' | 'ttl' | 'lfu';
+  evictionPolicy?: 'lru' | 'ttl' | 'manual' | 'lfu';
   compression?: { enabled: boolean; algorithm: 'gzip' | 'brotli' | 'lz4'; threshold: number; };
   circuitBreaker?: { enabled: boolean; failureThreshold: number; recoveryTimeout: number; };
   partitioning?: { enabled: boolean; strategy: 'hash' | 'range' | 'custom'; partitions: number; };
   monitoring?: { enabled: boolean; metrics: string[]; };
   distributed?: { enabled: boolean; nodes: string[]; replication: boolean; consistency: 'eventual' | 'strong'; partitionStrategy: string; };
+  onHit?: (key: string) => void;
+  onMiss?: (key: string) => void;
 }
 ```
 
